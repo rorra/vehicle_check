@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging
 from app.middleware import RequestLoggingMiddleware
-from app.routes import auth
+from app.routes import auth, users
 import logging
 
 # Configure logging
@@ -41,6 +41,7 @@ logger.info("Application startup", extra={"environment": getattr(settings, "ENVI
 
 # Include routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["authentication"])
+app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 
 @app.get("/")
 async def root():
