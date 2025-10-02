@@ -1,0 +1,22 @@
+fastapi==0.118.0                 # Web framework for building APIs
+uvicorn[standard]==0.37.0        # ASGI server for running FastAPI
+sqlalchemy==2.0.43               # ORM for database interactions
+pydantic==2.11.9                 # Data validation and settings management
+pydantic-settings==2.11.0        # Settings management for Pydantic
+email-validator==2.2.0           # Email validation for Pydantic EmailStr
+python-dotenv==1.1.1             # For loading environment variables from .env files
+alembic==1.16.5                  # Database migrations tool
+pymysql==1.1.2                   # MySQL adapter for Python
+cryptography==46.0.1             # Required for PyMySQL
+
+# Authentication
+passlib[bcrypt]==1.7.4           # Password hashing
+bcrypt==4.0.1                    # bcrypt for passlib (specific version for compatibility)
+python-jose[cryptography]==3.5.0 # JWT token handling
+
+# Testing
+pytest==8.4.2                    # Testing framework
+pytest-cov==7.0.0                # Coverage plugin for pytest
+httpx==0.28.1                    # HTTP client for testing (required by TestClient)
+faker==37.8.0                    # Fake data generation for tests
+factory-boy==3.3.3               # Test fixtures replacement for complex data
