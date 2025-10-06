@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging
 from app.middleware import RequestLoggingMiddleware
-from app.routes import auth, users, vehicles, inspectors
+from app.routes import auth, users, vehicles, inspectors, annual_inspections
 import logging
 
 # Configure logging
@@ -44,6 +44,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["aut
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(vehicles.router, prefix=f"{settings.API_V1_STR}/vehicles", tags=["vehicles"])
 app.include_router(inspectors.router, prefix=f"{settings.API_V1_STR}/inspectors", tags=["inspectors"])
+app.include_router(annual_inspections.router, prefix=f"{settings.API_V1_STR}/annual-inspections", tags=["annual-inspections"])
 
 @app.get("/")
 async def root():
