@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging
 from app.middleware import RequestLoggingMiddleware
-from app.routes import auth, users, vehicles, inspectors, annual_inspections
+from app.routes import auth, users, vehicles, inspectors, annual_inspections, appointments
 import logging
 
 # Configure logging
@@ -45,7 +45,7 @@ app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["u
 app.include_router(vehicles.router, prefix=f"{settings.API_V1_STR}/vehicles", tags=["vehicles"])
 app.include_router(inspectors.router, prefix=f"{settings.API_V1_STR}/inspectors", tags=["inspectors"])
 app.include_router(annual_inspections.router, prefix=f"{settings.API_V1_STR}/annual-inspections", tags=["annual-inspections"])
-
+app.include_router(appointments.router, prefix=f"{settings.API_V1_STR}/appointments", tags=["appointments"])
 @app.get("/")
 async def root():
     return {"message": "Welcome to Vehicle Check API"}
