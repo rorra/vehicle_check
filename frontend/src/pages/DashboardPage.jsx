@@ -127,7 +127,7 @@ const DashboardPage = () => {
           description: 'Ver y administrar todos los vehículos',
           icon: EditIcon,
           color: 'cyan',
-          path: '/admin/vehicles',
+          path: '/vehicles',
         },
         {
           title: 'Gestión de Turnos',

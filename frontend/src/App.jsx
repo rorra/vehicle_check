@@ -14,6 +14,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
+import VehicleManagementPage from './pages/VehicleManagementPage'
 import ClientManagementPage from './pages/admin/ClientManagementPage'
 import InspectorManagementPage from './pages/admin/InspectorManagementPage'
 import AdminManagementPage from './pages/admin/AdminManagementPage'
@@ -36,6 +37,11 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+
+          {/* Vehicle routes - accessible by CLIENT and ADMIN */}
+          <Route element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN']} />}>
+            <Route path="/vehicles" element={<VehicleManagementPage />} />
           </Route>
 
           {/* Admin-only routes */}
