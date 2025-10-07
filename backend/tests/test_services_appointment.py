@@ -482,6 +482,106 @@ class TestAppointmentServiceCreate:
         assert result.status == AppointmentStatus.CONFIRMED
         assert result.created_channel == CreatedChannel.CLIENT_PORTAL
 
+    def test_auto_create_annual_inspection_when_not_provided(
+        self,
+        db_session: Session,
+        client_user: User,
+        client_vehicle: Vehicle
+    ):
+        """Appointment creation auto-creates annual inspection if not provided."""
+        from app.schemas.appointment import AppointmentCreate
+
+        service = AppointmentService(db_session)
+        data = AppointmentCreate(
+            vehicle_id=client_vehicle.id,
+            annual_inspection_id=None,  # Not provided
+            date_time=datetime.now(timezone.utc) + timedelta(days=1)
+        )
+
+        result = service.create(data, client_user)
+
+        # Verify annual inspection was auto-created
+        annual = db_session.query(AnnualInspection).filter(
+            AnnualInspection.vehicle_id == client_vehicle.id,
+            AnnualInspection.year == datetime.now().year
+        ).first()
+
+        assert annual is not None
+        assert result.annual_inspection_id == annual.id
+        assert annual.status == AnnualStatus.PENDING
+
+    def test_rejects_appointment_if_current_year_already_passed(
+        self,
+        db_session: Session,
+        client_user: User,
+        client_vehicle: Vehicle
+    ):
+        """Cannot create appointment if current year inspection already passed."""
+        from app.schemas.appointment import AppointmentCreate
+
+        # Create PASSED annual inspection for current year
+        annual = AnnualInspection(
+            id=generate_uuid(),
+            vehicle_id=client_vehicle.id,
+            year=datetime.now().year,
+            status=AnnualStatus.PASSED,
+            attempt_count=1,
+        )
+        db_session.add(annual)
+        db_session.commit()
+
+        service = AppointmentService(db_session)
+        data = AppointmentCreate(
+            vehicle_id=client_vehicle.id,
+            annual_inspection_id=None,
+            date_time=datetime.now(timezone.utc) + timedelta(days=1)
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.create(data, client_user)
+
+        assert exc_info.value.status_code == 400
+        assert "ya fue aprobada" in exc_info.value.detail
+
+    def test_uses_existing_annual_inspection_if_not_passed(
+        self,
+        db_session: Session,
+        client_user: User,
+        client_vehicle: Vehicle
+    ):
+        """Uses existing annual inspection if current year exists but not passed."""
+        from app.schemas.appointment import AppointmentCreate
+
+        # Create PENDING annual inspection for current year
+        existing_annual = AnnualInspection(
+            id=generate_uuid(),
+            vehicle_id=client_vehicle.id,
+            year=datetime.now().year,
+            status=AnnualStatus.PENDING,
+            attempt_count=0,
+        )
+        db_session.add(existing_annual)
+        db_session.commit()
+
+        service = AppointmentService(db_session)
+        data = AppointmentCreate(
+            vehicle_id=client_vehicle.id,
+            annual_inspection_id=None,
+            date_time=datetime.now(timezone.utc) + timedelta(days=1)
+        )
+
+        result = service.create(data, client_user)
+
+        # Should use existing annual inspection, not create new one
+        assert result.annual_inspection_id == existing_annual.id
+
+        # Verify no duplicate was created
+        annual_count = db_session.query(AnnualInspection).filter(
+            AnnualInspection.vehicle_id == client_vehicle.id,
+            AnnualInspection.year == datetime.now().year
+        ).count()
+        assert annual_count == 1
+
     def test_inspector_cannot_create(
         self,
         db_session: Session,

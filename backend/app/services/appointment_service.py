@@ -117,13 +117,11 @@ class AppointmentService:
                 detail="No tienes permisos para crear turnos para este vehículo"
             )
 
-        # Verify annual inspection exists and belongs to vehicle
-        annual = self._get_annual_inspection(appointment_data.annual_inspection_id)
-        if annual.vehicle_id != vehicle.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="La inspección anual no corresponde al vehículo especificado"
-            )
+        # Get or create annual inspection for current year
+        annual = self._get_or_create_annual_inspection(
+            vehicle_id=vehicle.id,
+            annual_inspection_id=appointment_data.annual_inspection_id
+        )
 
         # Verify inspector if specified
         inspector_id = None
@@ -136,7 +134,7 @@ class AppointmentService:
         # Create appointment
         new_appointment = Appointment(
             id=generate_uuid(),
-            annual_inspection_id=appointment_data.annual_inspection_id,
+            annual_inspection_id=annual.id,
             vehicle_id=appointment_data.vehicle_id,
             inspector_id=inspector_id,
             created_by_user_id=current_user.id,
@@ -541,3 +539,63 @@ class AppointmentService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Solo puedes cambiar la fecha del turno"
             )
+
+    def _get_or_create_annual_inspection(
+        self,
+        vehicle_id: str,
+        annual_inspection_id: Optional[str] = None
+    ) -> AnnualInspection:
+        """
+        Get or create an annual inspection for the current year.
+
+        Args:
+            vehicle_id: The vehicle ID
+            annual_inspection_id: Optional annual inspection ID (for backwards compatibility)
+
+        Returns:
+            The annual inspection for the current year
+
+        Raises:
+            HTTPException: If the annual inspection for the current year is already approved
+        """
+        current_year = datetime.now().year
+
+        # If annual_inspection_id is provided, verify it and use it
+        if annual_inspection_id:
+            annual = self._get_annual_inspection(annual_inspection_id)
+            if annual.vehicle_id != vehicle_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="La inspección anual no corresponde al vehículo especificado"
+                )
+            return annual
+
+        # Check if an annual inspection exists for the current year
+        annual = self.db.query(AnnualInspection).filter(
+            AnnualInspection.vehicle_id == vehicle_id,
+            AnnualInspection.year == current_year
+        ).first()
+
+        # If it exists and is PASSED, reject the appointment creation
+        if annual and annual.status == AnnualStatus.PASSED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La inspección anual para este año ya fue aprobada"
+            )
+
+        # If it exists but is not PASSED, return it
+        if annual:
+            return annual
+
+        # If it doesn't exist, create it
+        new_annual = AnnualInspection(
+            id=generate_uuid(),
+            vehicle_id=vehicle_id,
+            year=current_year,
+            status=AnnualStatus.PENDING,
+            attempt_count=0,
+        )
+        self.db.add(new_annual)
+        self.db.flush()  # Flush to get the ID
+
+        return new_annual

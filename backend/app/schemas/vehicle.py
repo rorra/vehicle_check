@@ -112,6 +112,7 @@ class VehicleResponse(BaseModel):
     model: Optional[str] = Field(None, description="Modelo del vehículo")
     year: Optional[int] = Field(None, description="Año del vehículo")
     owner_id: str = Field(..., description="ID del propietario")
+    is_active: bool = Field(..., description="Si el vehículo está activo")
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
 

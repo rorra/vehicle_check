@@ -1,8 +1,9 @@
 from typing import List, Optional, Tuple
+from datetime import datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from app.models import Vehicle, User, UserRole, generate_uuid
+from app.models import Vehicle, User, UserRole, AnnualInspection, AnnualStatus, generate_uuid
 
 
 class VehicleService:
@@ -63,12 +64,42 @@ class VehicleService:
         ).first()
 
         if existing_vehicle:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ya existe un vehículo con esta matrícula"
-            )
+            # If vehicle exists and is disabled, reassign it to new owner and enable it
+            if not existing_vehicle.is_active:
+                existing_vehicle.owner_id = final_owner_id
+                existing_vehicle.is_active = True
+                existing_vehicle.make = make
+                existing_vehicle.model = model
+                existing_vehicle.year = year
 
-        # Create vehicle
+                # Create annual inspection for current year if doesn't exist
+                current_year = datetime.now().year
+                existing_annual = self.db.query(AnnualInspection).filter(
+                    AnnualInspection.vehicle_id == existing_vehicle.id,
+                    AnnualInspection.year == current_year
+                ).first()
+
+                if not existing_annual:
+                    annual_inspection = AnnualInspection(
+                        id=generate_uuid(),
+                        vehicle_id=existing_vehicle.id,
+                        year=current_year,
+                        status=AnnualStatus.PENDING,
+                        attempt_count=0,
+                    )
+                    self.db.add(annual_inspection)
+
+                self.db.commit()
+                self.db.refresh(existing_vehicle)
+                return existing_vehicle
+            else:
+                # Vehicle exists and is active
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Ya existe un vehículo activo con esta matrícula"
+                )
+
+        # Create new vehicle
         new_vehicle = Vehicle(
             id=generate_uuid(),
             plate_number=plate_number,
@@ -76,9 +107,23 @@ class VehicleService:
             model=model,
             year=year,
             owner_id=final_owner_id,
+            is_active=True,
         )
 
         self.db.add(new_vehicle)
+        self.db.flush()  # Flush to get the vehicle ID for the annual inspection
+
+        # Automatically create annual inspection for current year
+        current_year = datetime.now().year
+        annual_inspection = AnnualInspection(
+            id=generate_uuid(),
+            vehicle_id=new_vehicle.id,
+            year=current_year,
+            status=AnnualStatus.PENDING,
+            attempt_count=0,
+        )
+        self.db.add(annual_inspection)
+
         self.db.commit()
         self.db.refresh(new_vehicle)
 
@@ -90,7 +135,8 @@ class VehicleService:
         page: int,
         page_size: int,
         search: Optional[str] = None,
-        owner_id: Optional[str] = None
+        owner_id: Optional[str] = None,
+        include_inactive: bool = False
     ) -> Tuple[List[Vehicle], int]:
         """
         List vehicles with pagination.
@@ -101,6 +147,7 @@ class VehicleService:
             page_size: Results per page
             search: Search by plate, make, or model (optional)
             owner_id: Filter by owner (optional, admin only)
+            include_inactive: Include disabled vehicles (default False, admin can override)
 
         Returns:
             Tuple of (vehicles list, total count)
@@ -120,8 +167,15 @@ class VehicleService:
         # Filter by owner based on role
         if current_user.role == UserRole.CLIENT:
             query = query.filter(Vehicle.owner_id == current_user.id)
-        elif current_user.role == UserRole.ADMIN and owner_id:
-            query = query.filter(Vehicle.owner_id == owner_id)
+            # Clients only see active vehicles by default
+            if not include_inactive:
+                query = query.filter(Vehicle.is_active == True)
+        elif current_user.role == UserRole.ADMIN:
+            if owner_id:
+                query = query.filter(Vehicle.owner_id == owner_id)
+            # Admin can choose to include inactive vehicles
+            if not include_inactive:
+                query = query.filter(Vehicle.is_active == True)
 
         # Apply search filter
         if search:
@@ -292,6 +346,8 @@ class VehicleService:
     def delete(self, vehicle_id: str, current_user: User) -> None:
         """
         Delete a vehicle.
+        - CLIENT: Disables the vehicle (soft delete) to preserve records
+        - ADMIN: Can permanently delete with cascade
 
         Args:
             vehicle_id: The vehicle ID
@@ -321,14 +377,11 @@ class VehicleService:
                 detail="No tienes permisos para eliminar este vehículo"
             )
 
-        # Check if vehicle has inspections
-        if len(vehicle.annual_inspections) > 0:
-            if current_user.role == UserRole.CLIENT:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="No se puede eliminar un vehículo con inspecciones registradas"
-                )
-            # Admin can delete with cascade
-
-        self.db.delete(vehicle)
-        self.db.commit()
+        # CLIENT: Soft delete (disable) to preserve records
+        if current_user.role == UserRole.CLIENT:
+            vehicle.is_active = False
+            self.db.commit()
+        else:
+            # ADMIN: Hard delete with cascade
+            self.db.delete(vehicle)
+            self.db.commit()

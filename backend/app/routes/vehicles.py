@@ -45,18 +45,19 @@ def list_vehicles(
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de resultados por página"),
     search: Optional[str] = Query(None, description="Buscar por matrícula, marca o modelo"),
     owner_id: Optional[str] = Query(None, description="Filtrar por propietario (solo ADMIN)"),
+    include_inactive: bool = Query(False, description="Incluir vehículos deshabilitados"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List vehicles with pagination.
 
-    - CLIENT: Can only see their own vehicles
-    - ADMIN: Can see all vehicles, with optional filtering by owner
+    - CLIENT: Can only see their own active vehicles (disabled vehicles are hidden)
+    - ADMIN: Can see all vehicles, with optional filtering by owner and status
     - INSPECTOR: Cannot list vehicles
     """
     service = VehicleService(db)
-    vehicles, total = service.list(current_user, page, page_size, search, owner_id)
+    vehicles, total = service.list(current_user, page, page_size, search, owner_id, include_inactive)
 
     return VehicleListResponse(
         vehicles=vehicles,
@@ -88,6 +89,7 @@ def list_vehicles_with_owners(
             "model": vehicle.model,
             "year": vehicle.year,
             "owner_id": vehicle.owner_id,
+            "is_active": vehicle.is_active,
             "created_at": vehicle.created_at,
             "updated_at": vehicle.updated_at,
             "owner_name": vehicle.owner.name,

@@ -11,9 +11,9 @@ class AppointmentCreate(BaseModel):
         description="ID del vehículo a inspeccionar",
         examples=["550e8400-e29b-41d4-a716-446655440000"]
     )
-    annual_inspection_id: str = Field(
-        ...,
-        description="ID de la inspección anual",
+    annual_inspection_id: Optional[str] = Field(
+        None,
+        description="ID de la inspección anual (opcional, se creará automáticamente si no se proporciona)",
         examples=["550e8400-e29b-41d4-a716-446655440001"]
     )
     date_time: datetime = Field(

@@ -178,6 +178,7 @@ class Vehicle(Base):
         ForeignKey("users.id", onupdate="CASCADE", ondelete="RESTRICT"),
         nullable=False,
     )
+    is_active = Column(Boolean, nullable=False, server_default=text("1"))
 
     created_at = ts_created()
     updated_at = ts_updated()
