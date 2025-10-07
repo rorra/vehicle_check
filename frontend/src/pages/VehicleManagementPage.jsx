@@ -23,6 +23,7 @@ import {
   Alert,
   AlertIcon,
   useToast,
+  Badge,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -33,6 +34,7 @@ import {
   FormControl,
   FormLabel,
   Input,
+  Checkbox,
   useDisclosure,
   Text,
 } from '@chakra-ui/react'
@@ -46,6 +48,7 @@ const VehicleManagementPage = () => {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [includeInactive, setIncludeInactive] = useState(false)
   const toast = useToast()
 
   // Modal state
@@ -75,7 +78,7 @@ const VehicleManagementPage = () => {
     if (user) {
       loadVehicles()
     }
-  }, [user])
+  }, [user, includeInactive])
 
   const loadVehicles = async () => {
     setLoading(true)
@@ -89,7 +92,8 @@ const VehicleManagementPage = () => {
         setVehicles(data)
       } else {
         // Client gets their own vehicles
-        const data = await vehicleService.listVehicles()
+        const params = includeInactive ? { include_inactive: true } : {}
+        const data = await vehicleService.listVehicles(params)
         setVehicles(data.vehicles || data)
       }
     } catch (err) {
@@ -229,16 +233,28 @@ const VehicleManagementPage = () => {
     }
   }
 
-  const handleDelete = async (vehicleId, plateNumber) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el vehículo con matrícula "${plateNumber}"?`)) {
+  const handleDelete = async (vehicleId, plateNumber, isActive) => {
+    // Don't allow disabling already disabled vehicles
+    if (isActive === false && !isAdmin) {
+      return
+    }
+
+    const action = isAdmin ? 'eliminar' : 'deshabilitar'
+    const actionPast = isAdmin ? 'eliminado' : 'deshabilitado'
+
+    const confirmMessage = isAdmin
+      ? `¿Estás seguro de eliminar permanentemente el vehículo con matrícula "${plateNumber}"? Esto eliminará también sus inspecciones anuales, turnos y resultados.`
+      : `¿Estás seguro de deshabilitar el vehículo con matrícula "${plateNumber}"? Podrá volver a habilitarlo más tarde.`
+
+    if (!window.confirm(confirmMessage)) {
       return
     }
 
     try {
       await vehicleService.deleteVehicle(vehicleId)
       toast({
-        title: 'Vehículo eliminado',
-        description: 'El vehículo ha sido eliminado correctamente.',
+        title: `Vehículo ${actionPast}`,
+        description: `El vehículo ha sido ${actionPast} correctamente.`,
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -273,6 +289,16 @@ const VehicleManagementPage = () => {
           </HStack>
         </HStack>
 
+        {/* Filter Options */}
+        <HStack>
+          <Checkbox
+            isChecked={includeInactive}
+            onChange={(e) => setIncludeInactive(e.target.checked)}
+          >
+            Incluir vehículos deshabilitados
+          </Checkbox>
+        </HStack>
+
         {/* Error Alert */}
         {error && (
           <Alert status="error" borderRadius="md">
@@ -291,25 +317,26 @@ const VehicleManagementPage = () => {
                 <Th>Modelo</Th>
                 <Th>Año</Th>
                 {isAdmin && <Th>Propietario</Th>}
+                <Th>Estado</Th>
                 <Th>Acciones</Th>
               </Tr>
             </Thead>
             <Tbody>
               {loading ? (
                 <Tr>
-                  <Td colSpan={isAdmin ? 6 : 5} textAlign="center">
+                  <Td colSpan={isAdmin ? 7 : 6} textAlign="center">
                     Cargando...
                   </Td>
                 </Tr>
               ) : vehicles.length === 0 ? (
                 <Tr>
-                  <Td colSpan={isAdmin ? 6 : 5} textAlign="center">
+                  <Td colSpan={isAdmin ? 7 : 6} textAlign="center">
                     No hay vehículos
                   </Td>
                 </Tr>
               ) : (
                 vehicles.map((vehicle) => (
-                  <Tr key={vehicle.id}>
+                  <Tr key={vehicle.id} opacity={vehicle.is_active === false ? 0.6 : 1}>
                     <Td fontWeight="bold">{vehicle.plate_number}</Td>
                     <Td>{vehicle.make || '-'}</Td>
                     <Td>{vehicle.model || '-'}</Td>
@@ -329,20 +356,26 @@ const VehicleManagementPage = () => {
                       </Td>
                     )}
                     <Td>
+                      <Badge colorScheme={vehicle.is_active === false ? 'red' : 'green'}>
+                        {vehicle.is_active === false ? 'Deshabilitado' : 'Activo'}
+                      </Badge>
+                    </Td>
+                    <Td>
                       <HStack spacing={2}>
                         <Button
                           size="sm"
                           colorScheme="blue"
                           onClick={() => handleEdit(vehicle)}
+                          isDisabled={vehicle.is_active === false}
                         >
                           Editar
                         </Button>
                         <Button
                           size="sm"
                           colorScheme="red"
-                          onClick={() => handleDelete(vehicle.id, vehicle.plate_number)}
+                          onClick={() => handleDelete(vehicle.id, vehicle.plate_number, vehicle.is_active)}
                         >
-                          Eliminar
+                          {isAdmin ? 'Eliminar' : 'Deshabilitar'}
                         </Button>
                       </HStack>
                     </Td>

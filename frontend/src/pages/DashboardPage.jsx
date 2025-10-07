@@ -64,6 +64,13 @@ const DashboardPage = () => {
           path: '/vehicles',
         },
         {
+          title: 'Inspecciones Anuales',
+          description: 'Ver mis inspecciones anuales',
+          icon: CheckCircleIcon,
+          color: 'teal',
+          path: '/annual-inspections',
+        },
+        {
           title: 'Mis Turnos',
           description: 'Solicitar y ver turnos de inspección',
           icon: CalendarIcon,
@@ -82,6 +89,13 @@ const DashboardPage = () => {
 
     if (user?.role === 'INSPECTOR') {
       return [
+        {
+          title: 'Inspecciones Anuales',
+          description: 'Ver inspecciones anuales',
+          icon: CheckCircleIcon,
+          color: 'teal',
+          path: '/annual-inspections',
+        },
         {
           title: 'Turnos Asignados',
           description: 'Ver mis turnos asignados',
@@ -128,6 +142,13 @@ const DashboardPage = () => {
           icon: EditIcon,
           color: 'cyan',
           path: '/vehicles',
+        },
+        {
+          title: 'Inspecciones Anuales',
+          description: 'Administrar inspecciones anuales',
+          icon: CheckCircleIcon,
+          color: 'pink',
+          path: '/annual-inspections',
         },
         {
           title: 'Gestión de Turnos',

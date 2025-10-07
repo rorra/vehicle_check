@@ -62,7 +62,8 @@ describe('VehicleManagementPage', () => {
       make: 'Toyota',
       model: 'Corolla',
       year: 2020,
-      owner_id: 'user-1'
+      owner_id: 'user-1',
+      is_active: true
     },
     {
       id: '2',
@@ -70,7 +71,38 @@ describe('VehicleManagementPage', () => {
       make: 'Honda',
       model: 'Civic',
       year: 2021,
-      owner_id: 'user-2'
+      owner_id: 'user-2',
+      is_active: true
+    }
+  ]
+
+  const mockVehiclesWithInactive = [
+    {
+      id: '1',
+      plate_number: 'ABC123',
+      make: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      owner_id: 'user-1',
+      is_active: true
+    },
+    {
+      id: '2',
+      plate_number: 'XYZ789',
+      make: 'Honda',
+      model: 'Civic',
+      year: 2021,
+      owner_id: 'user-2',
+      is_active: true
+    },
+    {
+      id: '3',
+      plate_number: 'OLD456',
+      make: 'Ford',
+      model: 'Focus',
+      year: 2015,
+      owner_id: 'user-1',
+      is_active: false
     }
   ]
 
@@ -83,7 +115,8 @@ describe('VehicleManagementPage', () => {
       year: 2020,
       owner_id: 'client-1',
       owner_name: 'John Doe',
-      owner_email: 'john@example.com'
+      owner_email: 'john@example.com',
+      is_active: true
     },
     {
       id: '2',
@@ -93,7 +126,44 @@ describe('VehicleManagementPage', () => {
       year: 2021,
       owner_id: 'client-2',
       owner_name: 'Jane Smith',
-      owner_email: 'jane@example.com'
+      owner_email: 'jane@example.com',
+      is_active: true
+    }
+  ]
+
+  const mockVehiclesWithOwnersAndInactive = [
+    {
+      id: '1',
+      plate_number: 'ABC123',
+      make: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      owner_id: 'client-1',
+      owner_name: 'John Doe',
+      owner_email: 'john@example.com',
+      is_active: true
+    },
+    {
+      id: '2',
+      plate_number: 'XYZ789',
+      make: 'Honda',
+      model: 'Civic',
+      year: 2021,
+      owner_id: 'client-2',
+      owner_name: 'Jane Smith',
+      owner_email: 'jane@example.com',
+      is_active: true
+    },
+    {
+      id: '3',
+      plate_number: 'OLD456',
+      make: 'Ford',
+      model: 'Focus',
+      year: 2015,
+      owner_id: 'client-1',
+      owner_name: 'John Doe',
+      owner_email: 'john@example.com',
+      is_active: false
     }
   ]
 
@@ -289,7 +359,7 @@ describe('VehicleManagementPage', () => {
       })
     })
 
-    it('should delete vehicle when confirmed', async () => {
+    it('should show Deshabilitar button and soft delete confirmation for CLIENT', async () => {
       const user = userEvent.setup()
       global.confirm.mockReturnValue(true)
       vehicleServiceModule.vehicleService.deleteVehicle.mockResolvedValue()
@@ -300,15 +370,93 @@ describe('VehicleManagementPage', () => {
         expect(screen.getByText('ABC123')).toBeInTheDocument()
       })
 
-      const deleteButtons = screen.getAllByRole('button', { name: /eliminar/i })
-      await user.click(deleteButtons[0])
+      // CLIENT should see "Deshabilitar" not "Eliminar"
+      const disableButtons = screen.getAllByRole('button', { name: /deshabilitar/i })
+      expect(disableButtons.length).toBeGreaterThan(0)
+
+      await user.click(disableButtons[0])
 
       await waitFor(() => {
+        // Should show soft delete confirmation message
         expect(global.confirm).toHaveBeenCalledWith(
-          expect.stringContaining('ABC123')
+          expect.stringMatching(/deshabilitar.*ABC123.*volver a habilitar/i)
         )
         expect(vehicleServiceModule.vehicleService.deleteVehicle).toHaveBeenCalledWith('1')
       })
+    })
+
+    it('should display status badges for active and inactive vehicles', async () => {
+      vehicleServiceModule.vehicleService.listVehicles.mockResolvedValue({
+        vehicles: mockVehiclesWithInactive,
+        total: mockVehiclesWithInactive.length
+      })
+
+      renderVehicleManagementPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('ABC123')).toBeInTheDocument()
+      })
+
+      // Should show status column
+      expect(screen.getByText('Estado')).toBeInTheDocument()
+      // Should show "Activo" badges
+      const activeBadges = screen.getAllByText('Activo')
+      expect(activeBadges.length).toBeGreaterThan(0)
+    })
+
+    it('should filter inactive vehicles with checkbox', async () => {
+      const user = userEvent.setup()
+
+      // Initially return only active vehicles
+      vehicleServiceModule.vehicleService.listVehicles.mockResolvedValue({
+        vehicles: mockVehicles,
+        total: mockVehicles.length
+      })
+
+      renderVehicleManagementPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('ABC123')).toBeInTheDocument()
+      })
+
+      // Should show checkbox filter
+      const checkbox = screen.getByRole('checkbox', { name: /incluir vehículos deshabilitados/i })
+      expect(checkbox).toBeInTheDocument()
+      expect(checkbox).not.toBeChecked()
+
+      // When checkbox is clicked, should include inactive
+      vehicleServiceModule.vehicleService.listVehicles.mockResolvedValue({
+        vehicles: mockVehiclesWithInactive,
+        total: mockVehiclesWithInactive.length
+      })
+
+      await user.click(checkbox)
+
+      await waitFor(() => {
+        expect(vehicleServiceModule.vehicleService.listVehicles).toHaveBeenCalledWith(
+          { include_inactive: true }
+        )
+      })
+    })
+
+    it('should disable edit button for inactive vehicles', async () => {
+      vehicleServiceModule.vehicleService.listVehicles.mockResolvedValue({
+        vehicles: mockVehiclesWithInactive,
+        total: mockVehiclesWithInactive.length
+      })
+
+      renderVehicleManagementPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('OLD456')).toBeInTheDocument()
+      })
+
+      // Get all edit buttons
+      const editButtons = screen.getAllByRole('button', { name: /editar/i })
+
+      // The inactive vehicle's edit button (third row) should be disabled
+      const inactiveEditButton = editButtons[2]
+      expect(inactiveEditButton).toBeDisabled()
     })
 
     it('should display error when fetching vehicles fails', async () => {
@@ -431,6 +579,54 @@ describe('VehicleManagementPage', () => {
         // John Doe should still be in the table (so at least one occurrence exists)
         expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0)
       })
+    })
+
+    it('should show Eliminar button and hard delete confirmation for ADMIN', async () => {
+      const user = userEvent.setup()
+      global.confirm.mockReturnValue(true)
+      vehicleServiceModule.vehicleService.deleteVehicle.mockResolvedValue()
+
+      renderVehicleManagementPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('ABC123')).toBeInTheDocument()
+      })
+
+      // ADMIN should see "Eliminar" not "Deshabilitar"
+      const deleteButtons = screen.getAllByRole('button', { name: /eliminar/i })
+      expect(deleteButtons.length).toBeGreaterThan(0)
+
+      await user.click(deleteButtons[0])
+
+      await waitFor(() => {
+        // Should show hard delete confirmation with cascade warning
+        expect(global.confirm).toHaveBeenCalledWith(
+          expect.stringMatching(/eliminar permanentemente.*ABC123.*inspecciones.*turnos.*resultados/i)
+        )
+        expect(vehicleServiceModule.vehicleService.deleteVehicle).toHaveBeenCalledWith('1')
+      })
+    })
+
+    it('should display status badges and Estado column for ADMIN', async () => {
+      vehicleServiceModule.vehicleService.listVehiclesWithOwners.mockResolvedValue(
+        mockVehiclesWithOwnersAndInactive
+      )
+
+      renderVehicleManagementPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('ABC123')).toBeInTheDocument()
+      })
+
+      // Should show status column
+      expect(screen.getByText('Estado')).toBeInTheDocument()
+
+      // Should show "Activo" and "Deshabilitado" badges
+      const activeBadges = screen.getAllByText('Activo')
+      expect(activeBadges.length).toBe(2)
+
+      const inactiveBadges = screen.getAllByText('Deshabilitado')
+      expect(inactiveBadges.length).toBe(1)
     })
   })
 })

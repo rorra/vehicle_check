@@ -7,7 +7,7 @@ import api from './api'
 export const vehicleService = {
   /**
    * List vehicles with pagination
-   * CLIENT: Only their own vehicles
+   * CLIENT: Only their own active vehicles (unless include_inactive=true)
    * ADMIN: All vehicles with optional filtering
    */
   listVehicles: async (params = {}) => {
