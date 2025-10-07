@@ -17,11 +17,6 @@ class UserUpdate(BaseModel):
         description="Nuevo correo electrónico",
         examples=["juan@example.com"]
     )
-    role: Optional[UserRole] = Field(
-        None,
-        description="Nuevo rol del usuario",
-        examples=["CLIENT"]
-    )
     is_active: Optional[bool] = Field(
         None,
         description="Estado activo del usuario",

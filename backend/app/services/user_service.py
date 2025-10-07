@@ -79,7 +79,6 @@ class UserService:
         user: User,
         name: Optional[str] = None,
         email: Optional[str] = None,
-        role: Optional[UserRole] = None,
         is_active: Optional[bool] = None
     ) -> User:
         """
@@ -89,20 +88,19 @@ class UserService:
             user: The current user
             name: New name (optional)
             email: New email (optional)
-            role: New role (optional, not allowed for self-update)
             is_active: New active status (optional, not allowed for self-update)
 
         Returns:
             The updated user
 
         Raises:
-            HTTPException: If trying to change role/active status or email conflict
+            HTTPException: If trying to change active status or email conflict
         """
-        # Users cannot change their own role or active status
-        if role is not None or is_active is not None:
+        # Users cannot change their own active status
+        if is_active is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="No puedes cambiar tu propio rol o estado activo"
+                detail="No puedes cambiar tu propio estado activo"
             )
 
         # Check if new email already exists
@@ -227,7 +225,6 @@ class UserService:
         user_id: str,
         name: Optional[str] = None,
         email: Optional[str] = None,
-        role: Optional[UserRole] = None,
         is_active: Optional[bool] = None
     ) -> User:
         """
@@ -237,7 +234,6 @@ class UserService:
             user_id: The user ID
             name: New name (optional)
             email: New email (optional)
-            role: New role (optional)
             is_active: New active status (optional)
 
         Returns:
@@ -268,8 +264,6 @@ class UserService:
             user.name = name
         if email is not None:
             user.email = email
-        if role is not None:
-            user.role = role
         if is_active is not None:
             user.is_active = is_active
             # If deactivating, revoke all sessions

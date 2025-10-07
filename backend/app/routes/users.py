@@ -41,8 +41,7 @@ def update_current_user_profile(
     Users can update their own name and email, but not role or active status.
     """
     service = UserService(db)
-    return service.update_current_user(current_user, user_data.name, user_data.email, user_data.role,
-                                       user_data.is_active)
+    return service.update_current_user(current_user, user_data.name, user_data.email, user_data.is_active)
 
 
 @router.post("/me/change-password", status_code=status.HTTP_200_OK)
@@ -133,10 +132,10 @@ def update_user(
     """
     Update user details.
 
-    Only accessible by ADMIN.
+    Only accessible by ADMIN. Role cannot be changed via update.
     """
     service = UserService(db)
-    return service.update(user_id, user_data.name, user_data.email, user_data.role, user_data.is_active)
+    return service.update(user_id, user_data.name, user_data.email, user_data.is_active)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
