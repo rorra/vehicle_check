@@ -131,6 +131,20 @@ class AppointmentService:
                 current_user
             )
 
+        # Determine date_time: from slot_id or direct date_time
+        appointment_datetime = None
+        if appointment_data.slot_id:
+            # Get and book the slot
+            slot = self._get_and_book_slot(appointment_data.slot_id)
+            appointment_datetime = slot.start_time
+        elif appointment_data.date_time:
+            appointment_datetime = appointment_data.date_time
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe proporcionar slot_id o date_time"
+            )
+
         # Create appointment
         new_appointment = Appointment(
             id=generate_uuid(),
@@ -139,7 +153,7 @@ class AppointmentService:
             inspector_id=inspector_id,
             created_by_user_id=current_user.id,
             created_channel=CreatedChannel.CLIENT_PORTAL if current_user.role == UserRole.CLIENT else CreatedChannel.ADMIN_PANEL,
-            date_time=appointment_data.date_time,
+            date_time=appointment_datetime,
             status=AppointmentStatus.CONFIRMED,
             confirmation_token=f"CONF-{generate_uuid()[:8]}",
         )
@@ -281,7 +295,26 @@ class AppointmentService:
 
         # Update fields
         if appointment_data.date_time is not None:
-            appointment.date_time = appointment_data.date_time
+            # Free the old slot if it exists
+            old_datetime = appointment.date_time
+            self._free_slot_if_exists(old_datetime)
+
+            # Try to book the new slot if it exists
+            new_datetime = appointment_data.date_time
+            slot = self.db.query(AvailabilitySlot).filter(
+                AvailabilitySlot.start_time == new_datetime
+            ).first()
+
+            if slot:
+                if slot.is_booked:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="El slot seleccionado ya está reservado"
+                    )
+                slot.is_booked = True
+                self.db.flush()
+
+            appointment.date_time = new_datetime
 
         if appointment_data.inspector_id is not None:
             inspector_id = self._validate_inspector_assignment(
@@ -343,6 +376,9 @@ class AppointmentService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El turno ya está cancelado"
             )
+
+        # Free the slot if it exists
+        self._free_slot_if_exists(appointment.date_time)
 
         appointment.status = AppointmentStatus.CANCELLED
         self.db.commit()
@@ -599,3 +635,50 @@ class AppointmentService:
         self.db.flush()  # Flush to get the ID
 
         return new_annual
+
+    def _get_and_book_slot(self, slot_id: str) -> AvailabilitySlot:
+        """
+        Get a slot and mark it as booked.
+
+        Args:
+            slot_id: The slot ID
+
+        Returns:
+            The booked slot
+
+        Raises:
+            HTTPException: If slot not found or already booked
+        """
+        slot = self.db.query(AvailabilitySlot).filter(AvailabilitySlot.id == slot_id).first()
+        if not slot:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Slot no encontrado"
+            )
+
+        if slot.is_booked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este slot ya está reservado"
+            )
+
+        # Mark as booked
+        slot.is_booked = True
+        self.db.flush()
+
+        return slot
+
+    def _free_slot_if_exists(self, date_time: datetime) -> None:
+        """
+        Free a slot if it exists for the given datetime.
+
+        Args:
+            date_time: The datetime to match against slot start_time
+        """
+        slot = self.db.query(AvailabilitySlot).filter(
+            AvailabilitySlot.start_time == date_time
+        ).first()
+
+        if slot and slot.is_booked:
+            slot.is_booked = False
+            self.db.flush()

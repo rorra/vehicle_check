@@ -16,9 +16,14 @@ class AppointmentCreate(BaseModel):
         description="ID de la inspección anual (opcional, se creará automáticamente si no se proporciona)",
         examples=["550e8400-e29b-41d4-a716-446655440001"]
     )
-    date_time: datetime = Field(
-        ...,
-        description="Fecha y hora del turno",
+    slot_id: Optional[str] = Field(
+        None,
+        description="ID del slot de disponibilidad a reservar (se usará en lugar de date_time)",
+        examples=["550e8400-e29b-41d4-a716-446655440003"]
+    )
+    date_time: Optional[datetime] = Field(
+        None,
+        description="Fecha y hora del turno (se usará si no se especifica slot_id)",
         examples=["2024-03-15T10:00:00"]
     )
     inspector_id: Optional[str] = Field(
@@ -29,11 +34,12 @@ class AppointmentCreate(BaseModel):
 
     @field_validator("date_time")
     @classmethod
-    def validate_future_date(cls, v: datetime) -> datetime:
-        # Make comparison timezone-aware
-        now = datetime.now(timezone.utc) if v.tzinfo else datetime.now()
-        if v < now:
-            raise ValueError("La fecha del turno debe ser futura")
+    def validate_future_date(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None:
+            # Make comparison timezone-aware
+            now = datetime.now(timezone.utc) if v.tzinfo else datetime.now()
+            if v < now:
+                raise ValueError("La fecha del turno debe ser futura")
         return v
 
 
@@ -109,6 +115,28 @@ class AvailableSlotResponse(BaseModel):
     start_time: datetime = Field(..., description="Hora de inicio")
     end_time: datetime = Field(..., description="Hora de fin")
     is_booked: bool = Field(..., description="Si el slot está reservado")
+
+
+class AvailableSlotCreate(BaseModel):
+    """
+    Schema for creating a new availability slot.
+
+    Rules:
+    - Slots must start at minute :00 (e.g., 09:00, 11:00, not 09:30)
+    - End time is automatically calculated as start_time + 1 hour
+    """
+    start_time: datetime = Field(
+        ...,
+        description="Hora de inicio del slot (debe ser en punto, ej: 09:00:00)",
+        examples=["2024-03-15T10:00:00"]
+    )
+
+    @field_validator("start_time")
+    @classmethod
+    def validate_start_time(cls, v: datetime) -> datetime:
+        if v.minute != 0 or v.second != 0:
+            raise ValueError("La hora de inicio debe ser en punto (minuto :00)")
+        return v
 
 
 class CompleteAppointmentRequest(BaseModel):

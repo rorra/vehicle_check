@@ -114,7 +114,7 @@ def ensure_templates(session: Session) -> list[CheckItemTemplate]:
 
 
 def get_or_create_slot_block(session: Session, *, days: int = 30) -> list[AvailabilitySlot]:
-    """Create availability slots from 9 AM to 7 PM for the next N days, excluding Sundays."""
+    """Create availability slots from 8 AM to 2 PM for the next N days, excluding weekends."""
     slots: list[AvailabilitySlot] = []
     now = datetime.now()
     start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -122,12 +122,12 @@ def get_or_create_slot_block(session: Session, *, days: int = 30) -> list[Availa
     for day_offset in range(days):
         current_date = start_date + timedelta(days=day_offset)
 
-        # Skip Sundays (weekday() returns 6 for Sunday)
-        if current_date.weekday() == 6:
+        # Skip weekends (weekday() returns 5 for Saturday, 6 for Sunday)
+        if current_date.weekday() in [5, 6]:
             continue
 
-        # Create slots from 9 AM to 7 PM (each slot is 1 hour)
-        for hour in range(9, 19):
+        # Create slots from 8 AM to 2 PM (each slot is 1 hour)
+        for hour in range(8, 14):
             start = current_date.replace(hour=hour, minute=0, second=0, microsecond=0)
             end = start + timedelta(hours=1)
 
@@ -155,7 +155,7 @@ def get_or_create_slot_block(session: Session, *, days: int = 30) -> list[Availa
             slots.append(slot)
 
     session.commit()
-    print(f"Slots de disponibilidad creados: {len(slots)} slots para los próximos {days} días (excluyendo domingos)")
+    print(f"Slots de disponibilidad creados: {len(slots)} slots para los próximos {days} días (excluyendo fines de semana)")
     return slots
 
 
@@ -178,6 +178,19 @@ def get_or_create_appointment(
     )
     if ap:
         return ap
+
+    # Find and book the matching availability slot
+    slot = (
+        session.query(AvailabilitySlot)
+        .filter(AvailabilitySlot.start_time == when)
+        .one_or_none()
+    )
+    if slot:
+        if slot.is_booked:
+            print(f"ADVERTENCIA: El slot para {when.strftime('%Y-%m-%d %H:%M')} ya está reservado")
+        else:
+            slot.is_booked = True
+            session.flush()
 
     ap = Appointment(
         id=generate_uuid(),
