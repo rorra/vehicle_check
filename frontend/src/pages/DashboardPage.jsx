@@ -32,6 +32,7 @@ import {
   ViewIcon,
   StarIcon,
   EditIcon,
+  TimeIcon,
 } from '@chakra-ui/icons'
 
 const DashboardPage = () => {
@@ -101,7 +102,7 @@ const DashboardPage = () => {
           description: 'Ver mis turnos asignados',
           icon: CalendarIcon,
           color: 'green',
-          path: '/inspector/appointments',
+          path: '/appointments',
         },
         {
           title: 'Realizar Inspección',
@@ -155,7 +156,14 @@ const DashboardPage = () => {
           description: 'Asignar y administrar turnos',
           icon: CalendarIcon,
           color: 'green',
-          path: '/admin/appointments',
+          path: '/appointments',
+        },
+        {
+          title: 'Gestión de Horarios',
+          description: 'Administrar horarios disponibles',
+          icon: TimeIcon,
+          color: 'yellow',
+          path: '/admin/availability-slots',
         },
         {
           title: 'Resultados',

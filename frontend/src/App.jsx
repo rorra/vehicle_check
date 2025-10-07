@@ -16,9 +16,11 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import VehicleManagementPage from './pages/VehicleManagementPage'
 import AnnualInspectionManagementPage from './pages/AnnualInspectionManagementPage'
+import AppointmentManagementPage from './pages/AppointmentManagementPage'
 import ClientManagementPage from './pages/admin/ClientManagementPage'
 import InspectorManagementPage from './pages/admin/InspectorManagementPage'
 import AdminManagementPage from './pages/admin/AdminManagementPage'
+import AvailabilitySlotManagementPage from './pages/admin/AvailabilitySlotManagementPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
 function App() {
@@ -50,11 +52,17 @@ function App() {
             <Route path="/annual-inspections" element={<AnnualInspectionManagementPage />} />
           </Route>
 
+          {/* Appointment routes - accessible by all authenticated users */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/appointments" element={<AppointmentManagementPage />} />
+          </Route>
+
           {/* Admin-only routes */}
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="/admin/clients" element={<ClientManagementPage />} />
             <Route path="/admin/inspectors" element={<InspectorManagementPage />} />
             <Route path="/admin/admins" element={<AdminManagementPage />} />
+            <Route path="/admin/availability-slots" element={<AvailabilitySlotManagementPage />} />
           </Route>
         </Routes>
       </Router>
