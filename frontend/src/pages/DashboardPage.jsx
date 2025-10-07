@@ -9,43 +9,37 @@
  * Features:
  * - Role-based content display
  * - User greeting with name and role
- * - Logout functionality
+ * - Clickable cards for navigation
  */
 
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
-  Button,
   Container,
   Heading,
   Text,
   VStack,
-  HStack,
-  List,
-  ListItem,
-  ListIcon,
+  SimpleGrid,
+  Card,
+  CardBody,
+  Icon,
 } from '@chakra-ui/react'
-import { CheckCircleIcon } from '@chakra-ui/icons'
+import {
+  SettingsIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ViewIcon,
+  StarIcon,
+  EditIcon,
+} from '@chakra-ui/icons'
 
 const DashboardPage = () => {
-  // Get user and logout function from auth context
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   /**
-   * Handle logout button click
-   * Calls logout API and redirects to login page
-   */
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
-
-  /**
    * Convert role enum to Spanish label
-   * @param {string} role - User role (CLIENT, INSPECTOR, ADMIN)
-   * @returns {string} Spanish label
    */
   const getRoleLabel = (role) => {
     const labels = {
@@ -56,107 +50,166 @@ const DashboardPage = () => {
     return labels[role] || role
   }
 
+  /**
+   * Define menu cards for each role
+   */
+  const getMenuItems = () => {
+    if (user?.role === 'CLIENT') {
+      return [
+        {
+          title: 'Mis Vehículos',
+          description: 'Registrar y gestionar mis vehículos',
+          icon: SettingsIcon,
+          color: 'blue',
+          path: '/vehicles',
+        },
+        {
+          title: 'Mis Turnos',
+          description: 'Solicitar y ver turnos de inspección',
+          icon: CalendarIcon,
+          color: 'green',
+          path: '/appointments',
+        },
+        {
+          title: 'Resultados',
+          description: 'Ver resultados de inspecciones',
+          icon: ViewIcon,
+          color: 'purple',
+          path: '/results',
+        },
+      ]
+    }
+
+    if (user?.role === 'INSPECTOR') {
+      return [
+        {
+          title: 'Turnos Asignados',
+          description: 'Ver mis turnos asignados',
+          icon: CalendarIcon,
+          color: 'green',
+          path: '/inspector/appointments',
+        },
+        {
+          title: 'Realizar Inspección',
+          description: 'Completar inspecciones y registrar resultados',
+          icon: CheckCircleIcon,
+          color: 'orange',
+          path: '/inspector/inspections',
+        },
+      ]
+    }
+
+    if (user?.role === 'ADMIN') {
+      return [
+        {
+          title: 'Gestión de Clientes',
+          description: 'Crear, editar y eliminar clientes',
+          icon: SettingsIcon,
+          color: 'blue',
+          path: '/admin/clients',
+        },
+        {
+          title: 'Gestión de Inspectores',
+          description: 'Administrar inspectores del sistema',
+          icon: StarIcon,
+          color: 'teal',
+          path: '/admin/inspectors',
+        },
+        {
+          title: 'Gestión de Administradores',
+          description: 'Administrar otros administradores',
+          icon: ViewIcon,
+          color: 'purple',
+          path: '/admin/admins',
+        },
+        {
+          title: 'Gestión de Vehículos',
+          description: 'Ver y administrar todos los vehículos',
+          icon: EditIcon,
+          color: 'cyan',
+          path: '/admin/vehicles',
+        },
+        {
+          title: 'Gestión de Turnos',
+          description: 'Asignar y administrar turnos',
+          icon: CalendarIcon,
+          color: 'green',
+          path: '/admin/appointments',
+        },
+        {
+          title: 'Resultados',
+          description: 'Ver todos los resultados de inspecciones',
+          icon: CheckCircleIcon,
+          color: 'orange',
+          path: '/admin/results',
+        },
+      ]
+    }
+
+    return []
+  }
+
+  const menuItems = getMenuItems()
+
   return (
     <Box minH="100vh" bg="gray.50">
       <Container maxW="7xl" py={8}>
-        {/* Header with user greeting and logout button */}
-        <HStack justify="space-between" mb={8} flexWrap="wrap" gap={4}>
+        {/* Header with user greeting */}
+        <VStack align="stretch" spacing={6}>
           <Box>
             <Heading size="xl" mb={1}>
               Dashboard
             </Heading>
-            <Text fontSize="sm" color="gray.600">
+            <Text fontSize="lg" color="gray.600">
               Bienvenido, {user?.name} ({getRoleLabel(user?.role)})
             </Text>
           </Box>
-          <Button colorScheme="red" onClick={handleLogout}>
-            Cerrar Sesión
-          </Button>
-        </HStack>
 
-        {/* Main content card */}
-        <Box bg="white" borderRadius="lg" shadow="md" p={6}>
-          <Heading size="lg" mb={4}>
-            Sistema de Inspección Vehicular
-          </Heading>
-
-          {/* CLIENT role features */}
-          {user?.role === 'CLIENT' && (
-            <VStack align="stretch" mt={6} spacing={3}>
-              <Heading size="md" mb={2}>
-                Funcionalidades disponibles:
-              </Heading>
-              <List spacing={2}>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Registrar vehículos
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Solicitar turnos para inspección
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Ver resultados de inspecciones
-                </ListItem>
-              </List>
-            </VStack>
-          )}
-
-          {/* INSPECTOR role features */}
-          {user?.role === 'INSPECTOR' && (
-            <VStack align="stretch" mt={6} spacing={3}>
-              <Heading size="md" mb={2}>
-                Funcionalidades disponibles:
-              </Heading>
-              <List spacing={2}>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Ver turnos asignados
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Completar inspecciones
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Registrar resultados con puntajes
-                </ListItem>
-              </List>
-            </VStack>
-          )}
-
-          {/* ADMIN role features */}
-          {user?.role === 'ADMIN' && (
-            <VStack align="stretch" mt={6} spacing={3}>
-              <Heading size="md" mb={2}>
-                Funcionalidades disponibles:
-              </Heading>
-              <List spacing={2}>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Gestionar usuarios
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Gestionar inspectores
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Gestionar vehículos
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Asignar turnos
-                </ListItem>
-                <ListItem>
-                  <ListIcon as={CheckCircleIcon} color="green.500" />
-                  Ver todos los resultados
-                </ListItem>
-              </List>
-            </VStack>
-          )}
-        </Box>
+          {/* Menu Cards */}
+          <Box>
+            <Heading size="md" mb={4}>
+              Menú Principal
+            </Heading>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+              {menuItems.map((item) => (
+                <Card
+                  key={item.path}
+                  cursor="pointer"
+                  _hover={{
+                    transform: 'translateY(-4px)',
+                    shadow: 'xl',
+                  }}
+                  transition="all 0.2s"
+                  onClick={() => navigate(item.path)}
+                >
+                  <CardBody>
+                    <VStack align="start" spacing={3}>
+                      <Box
+                        p={3}
+                        bg={`${item.color}.50`}
+                        borderRadius="lg"
+                      >
+                        <Icon
+                          as={item.icon}
+                          boxSize={8}
+                          color={`${item.color}.500`}
+                        />
+                      </Box>
+                      <Box>
+                        <Heading size="md" mb={1}>
+                          {item.title}
+                        </Heading>
+                        <Text fontSize="sm" color="gray.600">
+                          {item.description}
+                        </Text>
+                      </Box>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))}
+            </SimpleGrid>
+          </Box>
+        </VStack>
       </Container>
     </Box>
   )

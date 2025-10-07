@@ -24,6 +24,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Box, Container, Heading, Text, Spinner, VStack } from '@chakra-ui/react'
+import Navbar from '../common/Navbar'
 
 const ProtectedRoute = ({ allowedRoles }) => {
   // Get authentication state from context
@@ -66,7 +67,12 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   // All checks passed - render the protected route
   // <Outlet /> renders the child route component
-  return <Outlet />
+  return (
+    <>
+      <Navbar />
+      <Outlet />
+    </>
+  )
 }
 
 export default ProtectedRoute

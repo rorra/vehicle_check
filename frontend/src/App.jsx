@@ -13,6 +13,10 @@ import { AuthProvider } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import ProfilePage from './pages/ProfilePage'
+import ClientManagementPage from './pages/admin/ClientManagementPage'
+import InspectorManagementPage from './pages/admin/InspectorManagementPage'
+import AdminManagementPage from './pages/admin/AdminManagementPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
 function App() {
@@ -31,6 +35,14 @@ function App() {
           {/* ProtectedRoute checks if user is logged in before rendering children */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+
+          {/* Admin-only routes */}
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/admin/clients" element={<ClientManagementPage />} />
+            <Route path="/admin/inspectors" element={<InspectorManagementPage />} />
+            <Route path="/admin/admins" element={<AdminManagementPage />} />
           </Route>
         </Routes>
       </Router>
