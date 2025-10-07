@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.core.security import verify_password, get_password_hash
-from app.models import User, UserSession, UserRole
+from app.models import User, UserSession, UserRole, generate_uuid
 
 
 class UserService:
@@ -12,6 +12,55 @@ class UserService:
 
     def __init__(self, db: Session):
         self.db = db
+
+    def create(
+        self,
+        name: str,
+        email: str,
+        password: str,
+        role: UserRole = UserRole.CLIENT,
+        is_active: bool = True
+    ) -> User:
+        """
+        Create a new user (admin operation).
+
+        Args:
+            name: User's full name
+            email: User's email address
+            password: User's password (will be hashed)
+            role: User's role (default: CLIENT)
+            is_active: Whether user is active (default: True)
+
+        Returns:
+            The created user
+
+        Raises:
+            HTTPException: If email already exists
+        """
+        # Check if email already exists
+        existing = self.db.query(User).filter(User.email == email).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ya existe un usuario con este correo electrónico"
+            )
+
+        # Create new user
+        hashed_password = get_password_hash(password)
+        new_user = User(
+            id=generate_uuid(),
+            name=name,
+            email=email,
+            password_hash=hashed_password,
+            role=role,
+            is_active=is_active,
+        )
+
+        self.db.add(new_user)
+        self.db.commit()
+        self.db.refresh(new_user)
+
+        return new_user
 
     def get_current_user(self, user: User) -> User:
         """

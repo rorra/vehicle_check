@@ -53,6 +53,29 @@ class TestUserRoutes:
 
         assert response.status_code == 200
 
+    def test_admin_create_user(self, client, admin_token):
+        """Test admin creating new user."""
+        user_data = {
+            "name": "New User",
+            "email": "newuser@example.com",
+            "password": "password123",
+            "role": "CLIENT"
+        }
+
+        response = client.post(
+            "/api/v1/users/",
+            json=user_data,
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "New User"
+        assert data["email"] == "newuser@example.com"
+        assert data["role"] == "CLIENT"
+        assert "password" not in data
+        assert "password_hash" not in data
+
     def test_admin_list_users(self, client, db_session, admin_token):
         """Test admin listing users with pagination."""
         response = client.get(

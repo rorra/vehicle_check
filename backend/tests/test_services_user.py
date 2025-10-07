@@ -179,6 +179,83 @@ class TestUserServiceChangePassword:
         assert exc_info.value.status_code == 400
 
 
+class TestUserServiceCreate:
+    """Test the create service method (admin operation)."""
+
+    def test_can_create_user(self, db_session: Session):
+        """Admin can create a new user."""
+        service = UserService(db_session)
+        user = service.create(
+            name="New User",
+            email="newuser@test.com",
+            password="Password123",
+            role=UserRole.CLIENT,
+            is_active=True
+        )
+
+        assert user.id is not None
+        assert user.name == "New User"
+        assert user.email == "newuser@test.com"
+        assert user.role == UserRole.CLIENT
+        assert user.is_active is True
+
+        # Verify password was hashed
+        from app.core.security import verify_password
+        assert verify_password("Password123", user.password_hash)
+
+    def test_cannot_create_duplicate_email(self, db_session: Session):
+        """Cannot create user with existing email."""
+        service = UserService(db_session)
+
+        # Create first user
+        service.create(
+            name="First User",
+            email="duplicate@test.com",
+            password="Password123",
+            role=UserRole.CLIENT
+        )
+
+        # Try to create second user with same email
+        with pytest.raises(HTTPException) as exc_info:
+            service.create(
+                name="Second User",
+                email="duplicate@test.com",
+                password="Password456",
+                role=UserRole.CLIENT
+            )
+
+        assert exc_info.value.status_code == 400
+
+    def test_can_create_with_different_roles(self, db_session: Session):
+        """Can create users with different roles."""
+        service = UserService(db_session)
+
+        admin = service.create(
+            name="Admin User",
+            email="admin@test.com",
+            password="Password123",
+            role=UserRole.ADMIN
+        )
+
+        inspector = service.create(
+            name="Inspector User",
+            email="inspector@test.com",
+            password="Password123",
+            role=UserRole.INSPECTOR
+        )
+
+        client = service.create(
+            name="Client User",
+            email="client@test.com",
+            password="Password123",
+            role=UserRole.CLIENT
+        )
+
+        assert admin.role == UserRole.ADMIN
+        assert inspector.role == UserRole.INSPECTOR
+        assert client.role == UserRole.CLIENT
+
+
 class TestUserServiceList:
     """Test the list service method."""
 

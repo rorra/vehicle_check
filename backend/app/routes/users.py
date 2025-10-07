@@ -9,7 +9,7 @@ from app.schemas.user import (
     UserListResponse,
     ChangePasswordRequest,
 )
-from app.schemas.auth import UserResponse
+from app.schemas.auth import UserResponse, UserRegister
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -59,6 +59,27 @@ def change_password(
     service = UserService(db)
     service.change_password(current_user, password_data.current_password, password_data.new_password)
     return {"message": "Contraseña cambiada exitosamente. Por favor, inicia sesión nuevamente."}
+
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(
+    user_data: UserRegister,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new user (ADMIN only).
+
+    Allows administrators to create users with any role.
+    """
+    service = UserService(db)
+    return service.create(
+        name=user_data.name,
+        email=user_data.email,
+        password=user_data.password,
+        role=user_data.role,
+        is_active=True
+    )
 
 
 @router.get("/", response_model=UserListResponse)
