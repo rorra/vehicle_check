@@ -79,8 +79,8 @@ const DashboardPage = () => {
           path: '/appointments',
         },
         {
-          title: 'Resultados',
-          description: 'Ver resultados de inspecciones',
+          title: 'Mis Resultados',
+          description: 'Ver resultados de mis inspecciones',
           icon: ViewIcon,
           color: 'purple',
           path: '/results',
@@ -110,6 +110,13 @@ const DashboardPage = () => {
           icon: CheckCircleIcon,
           color: 'orange',
           path: '/inspector/inspections',
+        },
+        {
+          title: 'Resultados',
+          description: 'Ver resultados de inspecciones',
+          icon: ViewIcon,
+          color: 'purple',
+          path: '/results',
         },
       ]
     }
@@ -164,6 +171,13 @@ const DashboardPage = () => {
           icon: TimeIcon,
           color: 'yellow',
           path: '/admin/availability-slots',
+        },
+        {
+          title: 'Gestión de Plantillas',
+          description: 'Administrar ítems de chequeo de inspecciones',
+          icon: EditIcon,
+          color: 'red',
+          path: '/admin/check-items',
         },
         {
           title: 'Resultados',

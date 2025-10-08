@@ -21,6 +21,9 @@ import ClientManagementPage from './pages/admin/ClientManagementPage'
 import InspectorManagementPage from './pages/admin/InspectorManagementPage'
 import AdminManagementPage from './pages/admin/AdminManagementPage'
 import AvailabilitySlotManagementPage from './pages/admin/AvailabilitySlotManagementPage'
+import CheckItemManagementPage from './pages/admin/CheckItemManagementPage'
+import InspectionResultsPage from './pages/InspectionResultsPage'
+import InspectorInspectionsPage from './pages/inspector/InspectorInspectionsPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
 function App() {
@@ -57,12 +60,24 @@ function App() {
             <Route path="/appointments" element={<AppointmentManagementPage />} />
           </Route>
 
+          {/* Inspection Results routes - accessible by all authenticated users */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/results" element={<InspectionResultsPage />} />
+          </Route>
+
+          {/* Inspector-only routes */}
+          <Route element={<ProtectedRoute allowedRoles={['INSPECTOR']} />}>
+            <Route path="/inspector/inspections" element={<InspectorInspectionsPage />} />
+          </Route>
+
           {/* Admin-only routes */}
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="/admin/clients" element={<ClientManagementPage />} />
             <Route path="/admin/inspectors" element={<InspectorManagementPage />} />
             <Route path="/admin/admins" element={<AdminManagementPage />} />
             <Route path="/admin/availability-slots" element={<AvailabilitySlotManagementPage />} />
+            <Route path="/admin/check-items" element={<CheckItemManagementPage />} />
+            <Route path="/admin/results" element={<InspectionResultsPage />} />
           </Route>
         </Routes>
       </Router>
