@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+import random
 from app.models import (
     Appointment,
     AnnualInspection,
@@ -123,13 +124,17 @@ class AppointmentService:
             annual_inspection_id=appointment_data.annual_inspection_id
         )
 
-        # Verify inspector if specified
+        # Assign inspector: either specified (admin only) or random
         inspector_id = None
         if appointment_data.inspector_id:
+            # Admin explicitly assigns an inspector
             inspector_id = self._validate_inspector_assignment(
                 appointment_data.inspector_id,
                 current_user
             )
+        else:
+            # Automatically assign a random active inspector
+            inspector_id = self._assign_random_inspector()
 
         # Determine date_time: from slot_id or direct date_time
         appointment_datetime = None
@@ -682,3 +687,21 @@ class AppointmentService:
         if slot and slot.is_booked:
             slot.is_booked = False
             self.db.flush()
+
+    def _assign_random_inspector(self) -> Optional[str]:
+        """
+        Randomly assign an active inspector to an appointment.
+
+        Returns:
+            The ID of a randomly selected active inspector, or None if no inspectors available
+        """
+        # Get all active inspectors
+        inspectors = self.db.query(Inspector).filter(Inspector.active == True).all()
+
+        if not inspectors:
+            # No active inspectors available - return None (appointment without inspector)
+            return None
+
+        # Randomly select one inspector
+        selected_inspector = random.choice(inspectors)
+        return selected_inspector.id
